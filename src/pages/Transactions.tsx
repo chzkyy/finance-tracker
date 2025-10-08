@@ -20,12 +20,13 @@ import { Transaction, TransactionFilters } from '@/types/api';
 import { format } from 'date-fns';
 
 const transactionSchema = z.object({
-  accountId: z.string().min(1, 'Account is required'),
-  categoryId: z.string().min(1, 'Category is required'),
+  account_id: z.string().min(1, 'Account is required'),
+  category_id: z.string().min(1, 'Category is required'),
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
   type: z.enum(['income', 'expense']),
   description: z.string().min(1, 'Description is required'),
-  date: z.string().min(1, 'Date is required'),
+  occurred_at: z.string().min(1, 'Date is required'),
+  currency: z.string().default('IDR'),
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -36,9 +37,11 @@ export default function Transactions() {
   const [filters, setFilters] = useState<TransactionFilters>({ page: 1, limit: 10 });
   const queryClient = useQueryClient();
 
-  const { data: transactionsData, isLoading } = useQuery({
+  const { data: transactionsData, isLoading, error } = useQuery({
     queryKey: ['transactions', filters],
     queryFn: () => transactionsApi.getAll(filters),
+    retry: 3,
+    staleTime: 1 * 60 * 1000, // 1 minute
   });
 
   const { data: accounts } = useQuery({
@@ -51,15 +54,21 @@ export default function Transactions() {
     queryFn: categoriesApi.getAll,
   });
 
+  // Ensure data is always arrays with proper null checks
+  const accountsArray = Array.isArray(accounts) ? accounts : [];
+  const categoriesArray = Array.isArray(categories) ? categories : [];
+  const transactionsArray = transactionsData?.data && Array.isArray(transactionsData.data) ? transactionsData.data : [];
+
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
-      accountId: '',
-      categoryId: '',
+      account_id: '',
+      category_id: '',
       amount: 0,
       type: 'expense',
       description: '',
-      date: format(new Date(), 'yyyy-MM-dd'),
+      occurred_at: format(new Date(), 'yyyy-MM-dd'),
+      currency: 'IDR',
     },
   });
 
@@ -104,12 +113,13 @@ export default function Transactions() {
       updateMutation.mutate({ id: editingTransaction.id, data });
     } else {
       createMutation.mutate({
-        accountId: data.accountId,
-        categoryId: data.categoryId,
+        account_id: data.account_id,
+        category_id: data.category_id,
         amount: data.amount,
         type: data.type,
         description: data.description,
-        date: data.date,
+        occurred_at: data.occurred_at,
+        currency: data.currency,
       });
     }
   };
@@ -117,12 +127,13 @@ export default function Transactions() {
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     form.reset({
-      accountId: transaction.accountId,
-      categoryId: transaction.categoryId,
+      account_id: transaction.account_id,
+      category_id: transaction.category_id,
       amount: transaction.amount,
       type: transaction.type,
       description: transaction.description,
-      date: format(new Date(transaction.date), 'yyyy-MM-dd'),
+      occurred_at: format(new Date(transaction.occurred_at || transaction.created_at), 'yyyy-MM-dd'),
+      currency: transaction.currency,
     });
     setIsOpen(true);
   };
@@ -179,7 +190,7 @@ export default function Transactions() {
                   />
                   <FormField
                     control={form.control}
-                    name="accountId"
+                    name="account_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Account</FormLabel>
@@ -190,7 +201,7 @@ export default function Transactions() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {accounts?.map((account) => (
+                            {accountsArray.map((account) => (
                               <SelectItem key={account.id} value={account.id}>
                                 {account.name}
                               </SelectItem>
@@ -203,7 +214,7 @@ export default function Transactions() {
                   />
                   <FormField
                     control={form.control}
-                    name="categoryId"
+                    name="category_id"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
@@ -214,7 +225,7 @@ export default function Transactions() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {categories?.map((category) => (
+                            {categoriesArray.map((category) => (
                               <SelectItem key={category.id} value={category.id}>
                                 {category.name}
                               </SelectItem>
@@ -258,7 +269,7 @@ export default function Transactions() {
                   />
                   <FormField
                     control={form.control}
-                    name="date"
+                    name="occurred_at"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Date</FormLabel>
@@ -307,7 +318,7 @@ export default function Transactions() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All accounts</SelectItem>
-                  {accounts?.map((account) => (
+                  {accountsArray.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.name}
                     </SelectItem>
@@ -343,38 +354,53 @@ export default function Transactions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isLoading && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
-                      Loading...
+                      Memuat transaksi...
                     </TableCell>
                   </TableRow>
-                ) : transactionsData?.data.length === 0 ? (
+                )}
+
+                {!isLoading && error && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-red-600">
+                      Gagal memuat transaksi. Silakan refresh halaman.
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {!isLoading && !error && (!transactionsData || !transactionsData.data || transactionsArray.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
-                      No transactions found
+                      Tidak ada transaksi ditemukan
                     </TableCell>
                   </TableRow>
-                ) : (
-                  transactionsData?.data.map((transaction) => (
+                )}
+
+                {!isLoading && !error && transactionsData && transactionsData.data && transactionsArray.length > 0 && 
+                  transactionsArray.map((transaction) => (
                     <TableRow key={transaction.id}>
-                      <TableCell>{format(new Date(transaction.date), 'MMM dd, yyyy')}</TableCell>
+                      <TableCell>{format(new Date(transaction.occurred_at || transaction.created_at), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>{transaction.description}</TableCell>
-                      <TableCell>{transaction.category?.name}</TableCell>
-                      <TableCell>{transaction.account?.name}</TableCell>
+                      <TableCell>{transaction.category?.name || 'from email'}</TableCell>
+                      <TableCell>{transaction.account?.name || 'from email'}</TableCell>
                       <TableCell>
                         <span
                           className={`capitalize ${
-                            transaction.type === 'income' ? 'text-success' : 'text-destructive'
+                            transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                           }`}
                         >
-                          {transaction.type}
+                          {transaction.type === 'income' ? 'Income' : 'Expense'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        <span className={transaction.type === 'income' ? 'text-success' : 'text-destructive'}>
-                          {transaction.type === 'income' ? '+' : '-'}$
-                          {transaction.amount.toLocaleString()}
+                        <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {new Intl.NumberFormat('id-ID', {
+                            style: 'currency',
+                            currency: transaction.currency || 'IDR',
+                          }).format(transaction.amount)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -388,8 +414,7 @@ export default function Transactions() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -414,7 +439,7 @@ export default function Transactions() {
             <Button
               variant="outline"
               size="icon"
-              disabled={filters.page === transactionsData?.totalPages}
+              disabled={!transactionsData || filters.page === transactionsData.totalPages}
               onClick={() => setFilters({ ...filters, page: (filters.page || 1) + 1 })}
             >
               <ChevronRight className="h-4 w-4" />

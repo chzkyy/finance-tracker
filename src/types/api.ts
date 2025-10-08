@@ -1,5 +1,20 @@
 // API Types based on common financial tracker structure
 
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  status?: string;
+}
+
+// Standardized pagination response for transactions
+export interface TransactionListResponse {
+  data: Transaction[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -21,16 +36,27 @@ export interface User {
   email: string;
   name: string;
   createdAt?: string;
+  updatedAt?: string;
 }
+
+export type AccountType = 'bank' | 'ewallet' | 'cash';
 
 export interface Account {
   id: string;
+  user_id: string;
   name: string;
-  type: 'checking' | 'savings' | 'credit' | 'investment' | 'cash';
-  balance: number;
-  currency: string;
-  createdAt: string;
-  updatedAt: string;
+  type: AccountType;
+  created_at: string;
+  createdAt: string; // for compatibility
+  user: {
+    id: string;
+    email: string;
+    created_at: string;
+  };
+}
+
+export interface AccountsResponse {
+  accounts: Account[];
 }
 
 export interface Category {
@@ -43,18 +69,75 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface RawEvent {
+  id: string;
+  external_id: string;
+  source: string;
+  provider_hint: string;
+  mail_from: string;
+  mail_to: string;
+  subject: string;
+  message_id: string;
+  payload: string;
+  status: string;
+  error_message: string;
+  received_at: string;
+  created_at: string;
+  user_id: string;
+  user: User;
+  transactions: string[];
+}
+
 export interface Transaction {
   id: string;
-  accountId: string;
-  categoryId: string;
+  user_id: string;
+  type: 'income' | 'expense';
+  amount: number;
+  currency: string;
+  account_id: string;
+  category_id: string;
+  occurred_at: string;
+  description: string;
+  external_id: string;
+  raw_event_id: string;
+  created_at: string;
+  updated_at: string;
+  user: User;
+  account: Account;
+  category: Category;
+  raw_event: RawEvent;
+}
+
+export interface TransactionCreatePayload {
+  account_id: string;
+  category_id: string;
   amount: number;
   type: 'income' | 'expense';
+  currency: string;
   description: string;
-  date: string;
-  createdAt: string;
-  updatedAt: string;
-  account?: Account;
-  category?: Category;
+  occurred_at: string;
+}
+
+export interface TransactionUpdatePayload {
+  account_id?: string;
+  category_id?: string;
+  amount?: number;
+  type?: 'income' | 'expense';
+  currency?: string;
+  description?: string;
+  occurred_at?: string;
+}
+
+export interface TransactionsPaginationResponse {
+  pagination: {
+    current_page: number;
+    has_next: boolean;
+    has_prev: boolean;
+    per_page: number;
+    total: number;
+    total_pages: number;
+  };
+  transactions: Transaction[];
 }
 
 export interface PaginatedResponse<T> {
@@ -73,6 +156,15 @@ export interface TransactionFilters {
   type?: 'income' | 'expense';
   page?: number;
   limit?: number;
+}
+
+export interface DashboardSummary {
+  year: number;
+  month: number;
+  total_income: number;
+  total_expense: number;
+  net_income: number;
+  saldo_akhir: number;
 }
 
 export interface DashboardStats {
@@ -105,4 +197,10 @@ export interface ApiError {
   message: string;
   statusCode: number;
   error?: string;
+  details?: any;
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
 }

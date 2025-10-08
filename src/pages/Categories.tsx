@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoriesApi } from '@/api/categories';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -29,9 +28,11 @@ export default function Categories() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: categories, isLoading } = useQuery({
+  const { data: categories, isLoading, error } = useQuery({
     queryKey: ['categories'],
     queryFn: categoriesApi.getAll,
+    retry: 3,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   const form = useForm<CategoryFormData>({
@@ -48,11 +49,11 @@ export default function Categories() {
     mutationFn: categoriesApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast.success('Category created successfully');
+      toast.success('Kategori berhasil ditambahkan');
       setIsOpen(false);
       form.reset();
     },
-    onError: () => toast.error('Failed to create category'),
+    onError: () => toast.error('Gagal menambahkan kategori'),
   });
 
   const updateMutation = useMutation({
@@ -60,21 +61,21 @@ export default function Categories() {
       categoriesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast.success('Category updated successfully');
+      toast.success('Kategori berhasil diperbarui');
       setIsOpen(false);
       setEditingCategory(null);
       form.reset();
     },
-    onError: () => toast.error('Failed to update category'),
+    onError: () => toast.error('Gagal memperbarui kategori'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: categoriesApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast.success('Category deleted successfully');
+      toast.success('Kategori berhasil dihapus');
     },
-    onError: () => toast.error('Failed to delete category'),
+    onError: () => toast.error('Gagal menghapus kategori'),
   });
 
   const onSubmit = (data: CategoryFormData) => {
@@ -97,32 +98,61 @@ export default function Categories() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this category?')) {
+    if (confirm('Apakah Anda yakin ingin menghapus kategori ini?')) {
       deleteMutation.mutate(id);
     }
   };
 
-  const incomeCategories = categories?.filter((c) => c.type === 'income') || [];
-  const expenseCategories = categories?.filter((c) => c.type === 'expense') || [];
+  // Ensure categories is always an array
+  const categoriesArray = Array.isArray(categories) ? categories : [];
+  console.log('Categories data:', categories, 'Array:', categoriesArray);
+  const incomeCategories = categoriesArray.filter((c) => c.type === 'income');
+  const expenseCategories = categoriesArray.filter((c) => c.type === 'expense');
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-96 items-center justify-center">
+          <div className="text-lg text-gray-500">Memuat kategori...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-96 items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg text-red-600 mb-2">Gagal memuat kategori</p>
+            <p className="text-sm text-gray-500">Silakan refresh halaman</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Categories</h1>
-            <p className="text-muted-foreground">Manage income and expense categories</p>
+            <h1 className="text-2xl font-bold text-gray-900">Kategori</h1>
+            <p className="text-gray-600">Kelola kategori pemasukan dan pengeluaran</p>
           </div>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditingCategory(null); form.reset(); }}>
+              <button 
+                onClick={() => { setEditingCategory(null); form.reset(); }}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Category
-              </Button>
+                Tambah Kategori
+              </button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editingCategory ? 'Edit Category' : 'Create Category'}</DialogTitle>
+                <DialogTitle>{editingCategory ? 'Edit Kategori' : 'Tambah Kategori'}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -131,9 +161,9 @@ export default function Categories() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name</FormLabel>
+                        <FormLabel>Nama Kategori</FormLabel>
                         <FormControl>
-                          <Input placeholder="Groceries" {...field} />
+                          <Input placeholder="Contoh: Makanan, Gaji, Transport" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -144,7 +174,7 @@ export default function Categories() {
                     name="type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Type</FormLabel>
+                        <FormLabel>Jenis</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -152,8 +182,8 @@ export default function Categories() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="income">Income</SelectItem>
-                            <SelectItem value="expense">Expense</SelectItem>
+                            <SelectItem value="income">Pemasukan</SelectItem>
+                            <SelectItem value="expense">Pengeluaran</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -161,7 +191,7 @@ export default function Categories() {
                     )}
                   />
                   <Button type="submit" className="w-full">
-                    {editingCategory ? 'Update' : 'Create'}
+                    {editingCategory ? 'Simpan Perubahan' : 'Tambah Kategori'}
                   </Button>
                 </form>
               </Form>
@@ -169,70 +199,155 @@ export default function Categories() {
           </Dialog>
         </div>
 
-        {isLoading ? (
+        {isLoading && (
           <div className="flex h-96 items-center justify-center">
-            <div className="text-lg text-muted-foreground">Loading...</div>
+            <div className="text-lg text-muted-foreground">Loading categories...</div>
           </div>
-        ) : (
+        )}
+
+        {!isLoading && error && (
+          <div className="flex h-96 items-center justify-center">
+            <div className="text-center">
+              <p className="text-lg text-destructive mb-2">Failed to load categories</p>
+              <p className="text-sm text-muted-foreground">Please try refreshing the page</p>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && !error && (
           <div className="space-y-6">
             {/* Income Categories */}
             <div>
-              <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-success">
+              <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-green-600">
                 <TrendingUp className="h-5 w-5" />
-                Income Categories
+                Kategori Pemasukan
               </h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {incomeCategories.map((category) => (
-                  <Card key={category.id}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{category.name}</span>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(category.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm text-muted-foreground capitalize">{category.type}</div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              {incomeCategories.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                  <p className="text-gray-500">Belum ada kategori pemasukan</p>
+                </div>
+              ) : (
+                <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Nama Kategori
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Jenis
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Aksi
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {incomeCategories.map((category) => (
+                          <tr key={category.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {category.name}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                Pemasukan
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  onClick={() => handleEdit(category)}
+                                  className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md transition-colors"
+                                  title="Edit kategori"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(category.id)}
+                                  className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors"
+                                  title="Hapus kategori"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Expense Categories */}
             <div>
-              <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-destructive">
+              <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-red-600">
                 <TrendingDown className="h-5 w-5" />
-                Expense Categories
+                Kategori Pengeluaran
               </h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {expenseCategories.map((category) => (
-                  <Card key={category.id}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{category.name}</span>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(category.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm text-muted-foreground capitalize">{category.type}</div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              {expenseCategories.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                  <p className="text-gray-500">Belum ada kategori pengeluaran</p>
+                </div>
+              ) : (
+                <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Nama Kategori
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Jenis
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Aksi
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {expenseCategories.map((category) => (
+                          <tr key={category.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {category.name}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                Pengeluaran
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  onClick={() => handleEdit(category)}
+                                  className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md transition-colors"
+                                  title="Edit kategori"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(category.id)}
+                                  className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors"
+                                  title="Hapus kategori"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

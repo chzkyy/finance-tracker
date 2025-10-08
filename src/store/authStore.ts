@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 interface User {
   id: string;
   email: string;
-  name?: string;
+  created_at: string;
 }
 
 interface AuthState {
@@ -18,7 +18,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -34,6 +34,20 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      // Ensure token is synced from localStorage on hydration
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const token = localStorage.getItem('auth_token');
+          if (token && !state.token) {
+            state.token = token;
+            state.isAuthenticated = true;
+          } else if (!token && state.token) {
+            state.token = null;
+            state.user = null;
+            state.isAuthenticated = false;
+          }
+        }
+      },
     }
   )
 );

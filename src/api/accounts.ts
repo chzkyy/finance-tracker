@@ -1,28 +1,53 @@
 import axios from '../lib/axios';
-import { Account } from '../types/api';
+import { Account, AccountsResponse } from '../types/api';
 
 export const accountsApi = {
   getAll: async () => {
-    const response = await axios.get<Account[]>('/accounts');
-    return response.data;
+    try {
+      const response = await axios.get<AccountsResponse>('/accounts');
+      return response.data.accounts;
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      throw error;
+    }
   },
 
   getById: async (id: string) => {
-    const response = await axios.get<Account>(`/accounts/${id}`);
-    return response.data;
+    try {
+      const response = await axios.get<{ account: Account }>(`/accounts/${id}`);
+      return response.data.account;
+    } catch (error) {
+      console.error('Error fetching account:', error);
+      throw error;
+    }
   },
 
-  create: async (data: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const response = await axios.post<Account>('/accounts', data);
-    return response.data;
+  create: async (data: { name: string; type: string }) => {
+    try {
+      const response = await axios.post<{ account: Account }>('/accounts', data);
+      return response.data.account;
+    } catch (error) {
+      console.error('Error creating account:', error);
+      throw error;
+    }
   },
 
-  update: async (id: string, data: Partial<Account>) => {
-    const response = await axios.put<Account>(`/accounts/${id}`, data);
-    return response.data;
+  update: async (id: string, data: { name?: string; type?: string }) => {
+    try {
+      const response = await axios.put<{ account: Account }>(`/accounts/${id}`, data);
+      return response.data.account;
+    } catch (error) {
+      console.error('Error updating account:', error);
+      throw error;
+    }
   },
 
   delete: async (id: string) => {
-    await axios.delete(`/accounts/${id}`);
+    try {
+      await axios.delete(`/accounts/${id}`);
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
   },
 };

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import OAuthRedirectHandler from "@/components/OAuthRedirectHandler";
 import { useAuthStore } from "@/store/authStore";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -12,9 +13,24 @@ import Categories from "./pages/Categories";
 import Transactions from "./pages/Transactions";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import OAuthCallback from "./pages/OAuthCallback";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: any) => {
+        // Don't retry on 401 errors
+        if (error?.response?.status === 401) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -31,11 +47,17 @@ const App = () => {
               element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
             />
             <Route
+              path="/oauth/callback"
+              element={<OAuthCallback />}
+            />
+            <Route
               path="/"
               element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
+                <OAuthRedirectHandler>
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                </OAuthRedirectHandler>
               }
             />
             <Route
