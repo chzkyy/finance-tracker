@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Edit, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Transaction, TransactionFilters, TransactionCreatePayload, TransactionUpdatePayload } from '@/types/api';
 import { format } from 'date-fns';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 // Helper function to convert datetime-local format to ISO with +07:00 timezone
 const formatDateTimeWithTimezone = (dateTimeLocal: string) => {
@@ -51,6 +52,8 @@ export default function Transactions() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>({ page: 1, limit: 10 });
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const queryClient = useQueryClient();
 
   const { data: transactionsData, isLoading, error } = useQuery({
@@ -95,7 +98,16 @@ export default function Transactions() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       toast.success('Transaction created successfully');
       setIsOpen(false);
-      form.reset();
+      // Reset form with completely empty values
+      form.reset({
+        account_id: '',
+        category_id: '',
+        amount: undefined,
+        type: 'expense', // Keep default type to avoid validation errors
+        description: '',
+        occurred_at: '',
+        currency: '',
+      });
     },
     onError: () => toast.error('Failed to create transaction'),
   });
@@ -157,10 +169,22 @@ export default function Transactions() {
     setIsOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this transaction?')) {
-      deleteMutation.mutate(id);
+  const handleDelete = (transaction: Transaction) => {
+    setTransactionToDelete(transaction);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (transactionToDelete) {
+      deleteMutation.mutate(transactionToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setTransactionToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setTransactionToDelete(null);
   };
 
   return (
@@ -173,7 +197,18 @@ export default function Transactions() {
           </div>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditingTransaction(null); form.reset(); }}>
+              <Button onClick={() => { 
+                setEditingTransaction(null); 
+                form.reset({
+                  account_id: '',
+                  category_id: '',
+                  amount: undefined,
+                  type: 'expense',
+                  description: '',
+                  occurred_at: '',
+                  currency: '',
+                });
+              }}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Transaction
               </Button>
@@ -428,7 +463,7 @@ export default function Transactions() {
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(transaction)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(transaction.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(transaction)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -466,6 +501,22 @@ export default function Transactions() {
             </Button>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={cancelDelete}
+          onConfirm={confirmDelete}
+          title="Delete Transaction"
+          message={
+            transactionToDelete 
+              ? `Are you sure you want to delete the transaction "${transactionToDelete.description}" for ${transactionToDelete.currency} ${transactionToDelete.amount.toLocaleString()}? This action cannot be undone.`
+              : "Are you sure you want to delete this transaction? This action cannot be undone."
+          }
+          confirmText="Delete"
+          cancelText="Cancel"
+          type="danger"
+        />
       </div>
     </DashboardLayout>
   );
