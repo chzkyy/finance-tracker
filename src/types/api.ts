@@ -128,6 +128,12 @@ export interface TransactionUpdatePayload {
   external_id?: string;
 }
 
+// Full transaction update payload with all nested objects (same as create)
+export interface TransactionFullUpdatePayload extends TransactionFullCreatePayload {
+  // Inherits all properties from TransactionFullCreatePayload
+  // Used for updates when full payload structure is required
+}
+
 // Full transaction create payload with all nested objects
 export interface TransactionFullCreatePayload {
   id: string;

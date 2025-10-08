@@ -88,8 +88,87 @@ export default function Transactions() {
     onError: () => toast.error('Failed to create transaction'),
   });
 
+  // Helper function to build full nested payload
+  const buildFullPayload = (data: TransactionFormData, existingTransaction?: Transaction) => {
+    const selectedAccount = accounts?.find(acc => acc.id === data.account_id);
+    const selectedCategory = categories?.find(cat => cat.id === data.category_id);
+    
+    if (!selectedAccount || !selectedCategory || !user) {
+      throw new Error('Missing required data');
+    }
+
+    return {
+      id: existingTransaction?.id || crypto.randomUUID(),
+      user_id: user.id,
+      account_id: data.account_id,
+      category_id: data.category_id,
+      amount: data.amount,
+      currency: data.currency,
+      description: data.description,
+      external_id: existingTransaction?.external_id || crypto.randomUUID(),
+      raw_event_id: existingTransaction?.raw_event_id || crypto.randomUUID(),
+      type: data.type,
+      occurred_at: data.occurred_at,
+      created_at: existingTransaction?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      account: {
+        id: selectedAccount.id,
+        name: selectedAccount.name,
+        type: selectedAccount.type,
+        user_id: selectedAccount.user_id,
+        created_at: selectedAccount.created_at,
+        transactions: selectedAccount.transactions || [],
+        user: {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+        },
+      },
+      category: {
+        id: selectedCategory.id,
+        name: selectedCategory.name,
+        type: selectedCategory.type,
+        user_id: user.id,
+        created_at: selectedCategory.createdAt || new Date().toISOString(),
+        transactions: [],
+        user: {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+        },
+      },
+      raw_event: {
+        id: existingTransaction?.raw_event?.id || crypto.randomUUID(),
+        external_id: existingTransaction?.raw_event?.external_id || crypto.randomUUID(),
+        source: existingTransaction?.raw_event?.source || "manual",
+        provider_hint: existingTransaction?.raw_event?.provider_hint || "manual_entry",
+        mail_from: existingTransaction?.raw_event?.mail_from || "",
+        mail_to: existingTransaction?.raw_event?.mail_to || "",
+        subject: existingTransaction?.raw_event?.subject || `Manual transaction: ${data.description}`,
+        message_id: existingTransaction?.raw_event?.message_id || "",
+        payload: JSON.stringify(data),
+        status: existingTransaction?.raw_event?.status || "processed",
+        error_message: existingTransaction?.raw_event?.error_message || "",
+        received_at: existingTransaction?.raw_event?.received_at || new Date().toISOString(),
+        created_at: existingTransaction?.raw_event?.created_at || new Date().toISOString(),
+        user_id: user.id,
+        transactions: existingTransaction?.raw_event?.transactions || [],
+        user: {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+        },
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        created_at: user.created_at,
+      },
+    };
+  };
+
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Transaction> }) =>
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
       transactionsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -113,90 +192,19 @@ export default function Transactions() {
   });
 
   const onSubmit = (data: TransactionFormData) => {
-    if (editingTransaction) {
-      updateMutation.mutate({ id: editingTransaction.id, data });
-    } else {
-      // Find the selected account and category to build full nested payload
-      const selectedAccount = accounts?.find(acc => acc.id === data.account_id);
-      const selectedCategory = categories?.find(cat => cat.id === data.category_id);
-      
-      if (!selectedAccount || !selectedCategory || !user) {
-        toast.error('Missing required data. Please refresh and try again.');
-        return;
+    try {
+      if (editingTransaction) {
+        // Build full payload for update
+        const fullUpdatePayload = buildFullPayload(data, editingTransaction);
+        updateMutation.mutate({ id: editingTransaction.id, data: fullUpdatePayload });
+      } else {
+        // Build full payload for create
+        const fullCreatePayload = buildFullPayload(data);
+        createMutation.mutate(fullCreatePayload as any);
       }
-
-      // Build the full nested payload structure
-      const fullPayload = {
-        id: crypto.randomUUID(), // Generate temporary ID
-        user_id: user.id,
-        account_id: data.account_id,
-        category_id: data.category_id,
-        amount: data.amount,
-        currency: data.currency,
-        description: data.description,
-        external_id: crypto.randomUUID(), // Generate external ID
-        raw_event_id: crypto.randomUUID(), // Generate raw event ID
-        type: data.type,
-        occurred_at: data.occurred_at,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        account: {
-          id: selectedAccount.id,
-          name: selectedAccount.name,
-          type: selectedAccount.type,
-          user_id: selectedAccount.user_id,
-          created_at: selectedAccount.created_at,
-          transactions: selectedAccount.transactions || [],
-          user: {
-            id: user.id,
-            email: user.email,
-            created_at: user.created_at,
-          },
-        },
-        category: {
-          id: selectedCategory.id,
-          name: selectedCategory.name,
-          type: selectedCategory.type,
-          user_id: user.id,
-          created_at: selectedCategory.createdAt || new Date().toISOString(),
-          transactions: [],
-          user: {
-            id: user.id,
-            email: user.email,
-            created_at: user.created_at,
-          },
-        },
-        raw_event: {
-          id: crypto.randomUUID(),
-          external_id: crypto.randomUUID(),
-          source: "manual",
-          provider_hint: "manual_entry",
-          mail_from: "",
-          mail_to: "",
-          subject: `Manual transaction: ${data.description}`,
-          message_id: "",
-          payload: JSON.stringify(data),
-          status: "processed",
-          error_message: "",
-          received_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          user_id: user.id,
-          transactions: [],
-          user: {
-            id: user.id,
-            email: user.email,
-            created_at: user.created_at,
-          },
-        },
-        user: {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-        },
-      };
-
-      console.log('Sending full payload:', fullPayload);
-      createMutation.mutate(fullPayload as any); // Type assertion for the full payload
+    } catch (error) {
+      console.error('Transaction submission error:', error);
+      toast.error('Missing required data. Please refresh and try again.');
     }
   };
 
