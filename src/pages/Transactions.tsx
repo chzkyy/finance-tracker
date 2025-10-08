@@ -16,9 +16,33 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Transaction, TransactionFilters } from '@/types/api';
+import { Transaction, TransactionFilters, TransactionCreatePayload, TransactionUpdatePayload } from '@/types/api';
 import { format } from 'date-fns';
-import { useAuthStore } from '@/store/authStore';
+
+// Helper function to format date for datetime-local input (YYYY-MM-DDTHH:MM)
+const formatDateTimeLocal = (date: Date | string) => {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+// Helper function to convert datetime-local format to ISO with +07:00 timezone
+const formatDateTimeWithTimezone = (dateTimeLocal: string) => {
+  // dateTimeLocal format: "2025-10-08T12:00"
+  // Convert to: "2025-10-08T12:00:00+07:00"
+  return `${dateTimeLocal}:00+07:00`;
+};
+
+// Helper function to convert ISO datetime to datetime-local format for form display
+const parseISOToDateTimeLocal = (isoDateTime: string) => {
+  // Parse ISO datetime and convert to local datetime-local format
+  const date = new Date(isoDateTime);
+  return formatDateTimeLocal(date);
+};
 
 const transactionSchema = z.object({
   account_id: z.string().min(1, 'Account is required'),
@@ -37,9 +61,6 @@ export default function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>({ page: 1, limit: 10 });
   const queryClient = useQueryClient();
-  
-  // Get current user from auth store
-  const { user } = useAuthStore();
 
   const { data: transactionsData, isLoading, error } = useQuery({
     queryKey: ['transactions', filters],
@@ -88,87 +109,8 @@ export default function Transactions() {
     onError: () => toast.error('Failed to create transaction'),
   });
 
-  // Helper function to build full nested payload
-  const buildFullPayload = (data: TransactionFormData, existingTransaction?: Transaction) => {
-    const selectedAccount = accounts?.find(acc => acc.id === data.account_id);
-    const selectedCategory = categories?.find(cat => cat.id === data.category_id);
-    
-    if (!selectedAccount || !selectedCategory || !user) {
-      throw new Error('Missing required data');
-    }
-
-    return {
-      id: existingTransaction?.id || crypto.randomUUID(),
-      user_id: user.id,
-      account_id: data.account_id,
-      category_id: data.category_id,
-      amount: data.amount,
-      currency: data.currency,
-      description: data.description,
-      external_id: existingTransaction?.external_id || crypto.randomUUID(),
-      raw_event_id: existingTransaction?.raw_event_id || crypto.randomUUID(),
-      type: data.type,
-      occurred_at: data.occurred_at,
-      created_at: existingTransaction?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      account: {
-        id: selectedAccount.id,
-        name: selectedAccount.name,
-        type: selectedAccount.type,
-        user_id: selectedAccount.user_id,
-        created_at: selectedAccount.created_at,
-        transactions: selectedAccount.transactions || [],
-        user: {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-        },
-      },
-      category: {
-        id: selectedCategory.id,
-        name: selectedCategory.name,
-        type: selectedCategory.type,
-        user_id: user.id,
-        created_at: selectedCategory.createdAt || new Date().toISOString(),
-        transactions: [],
-        user: {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-        },
-      },
-      raw_event: {
-        id: existingTransaction?.raw_event?.id || crypto.randomUUID(),
-        external_id: existingTransaction?.raw_event?.external_id || crypto.randomUUID(),
-        source: existingTransaction?.raw_event?.source || "manual",
-        provider_hint: existingTransaction?.raw_event?.provider_hint || "manual_entry",
-        mail_from: existingTransaction?.raw_event?.mail_from || "",
-        mail_to: existingTransaction?.raw_event?.mail_to || "",
-        subject: existingTransaction?.raw_event?.subject || `Manual transaction: ${data.description}`,
-        message_id: existingTransaction?.raw_event?.message_id || "",
-        payload: JSON.stringify(data),
-        status: existingTransaction?.raw_event?.status || "processed",
-        error_message: existingTransaction?.raw_event?.error_message || "",
-        received_at: existingTransaction?.raw_event?.received_at || new Date().toISOString(),
-        created_at: existingTransaction?.raw_event?.created_at || new Date().toISOString(),
-        user_id: user.id,
-        transactions: existingTransaction?.raw_event?.transactions || [],
-        user: {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-        },
-      },
-      user: {
-        id: user.id,
-        email: user.email,
-        created_at: user.created_at,
-      },
-    };
-  };
-
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
+    mutationFn: ({ id, data }: { id: string; data: TransactionUpdatePayload }) =>
       transactionsApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -192,19 +134,21 @@ export default function Transactions() {
   });
 
   const onSubmit = (data: TransactionFormData) => {
-    try {
-      if (editingTransaction) {
-        // Build full payload for update
-        const fullUpdatePayload = buildFullPayload(data, editingTransaction);
-        updateMutation.mutate({ id: editingTransaction.id, data: fullUpdatePayload });
-      } else {
-        // Build full payload for create
-        const fullCreatePayload = buildFullPayload(data);
-        createMutation.mutate(fullCreatePayload as any);
-      }
-    } catch (error) {
-      console.error('Transaction submission error:', error);
-      toast.error('Missing required data. Please refresh and try again.');
+    // Convert datetime-local format to ISO with timezone
+    const formattedData: TransactionCreatePayload = {
+      account_id: data.account_id,
+      category_id: data.category_id,
+      amount: data.amount,
+      type: data.type,
+      description: data.description,
+      occurred_at: formatDateTimeWithTimezone(data.occurred_at),
+      currency: data.currency,
+    };
+
+    if (editingTransaction) {
+      updateMutation.mutate({ id: editingTransaction.id, data: formattedData });
+    } else {
+      createMutation.mutate(formattedData);
     }
   };
 

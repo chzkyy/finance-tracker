@@ -5,32 +5,10 @@ import {
   TransactionFilters, 
   TransactionCreatePayload, 
   TransactionUpdatePayload, 
-  TransactionListResponse,
-  TransactionFullPayload,
-  TransactionFullCreatePayload,
-  TransactionFullUpdatePayload,
-  AccountType
+  TransactionListResponse
 } from '../types/api';
 
 export const transactionsApi = {
-  // Helper function to transform API response to internal Transaction format
-  transformTransaction: (apiTransaction: TransactionFullPayload): Transaction => {
-    return {
-      ...apiTransaction,
-      account: {
-        ...apiTransaction.account,
-        createdAt: apiTransaction.account.created_at, // Map created_at to createdAt
-        type: apiTransaction.account.type as AccountType,
-      },
-      category: {
-        ...apiTransaction.category,
-        createdAt: apiTransaction.category.created_at, // Map created_at to createdAt
-        updatedAt: apiTransaction.category.created_at, // Use created_at as updatedAt fallback
-        type: apiTransaction.category.type as 'income' | 'expense',
-      },
-    };
-  },
-
   getAll: async (filters: TransactionFilters = {}): Promise<TransactionListResponse> => {
     try {
       const params: any = {};
@@ -94,24 +72,20 @@ export const transactionsApi = {
     }
   },
 
-  create: async (data: TransactionCreatePayload | TransactionFullCreatePayload): Promise<Transaction> => {
+  create: async (data: TransactionCreatePayload) => {
     try {
-      const response = await axios.post<TransactionFullPayload>('/transactions', data);
-      
-      // Transform the API response to match our internal Transaction interface
-      return transactionsApi.transformTransaction(response.data);
+      const response = await axios.post<{ data: Transaction }>('/transactions', data);
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error creating transaction:', error);
       throw error;
     }
   },
 
-  update: async (id: string, data: TransactionUpdatePayload | TransactionFullUpdatePayload): Promise<Transaction> => {
+  update: async (id: string, data: TransactionUpdatePayload) => {
     try {
-      const response = await axios.put<TransactionFullPayload>(`/transactions/${id}`, data);
-      
-      // Transform the API response to match our internal Transaction interface
-      return transactionsApi.transformTransaction(response.data);
+      const response = await axios.put<{ data: Transaction }>(`/transactions/${id}`, data);
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error updating transaction:', error);
       throw error;
