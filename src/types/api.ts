@@ -33,9 +33,7 @@ export interface RegisterRequest {
 export interface User {
   id: string;
   email: string;
-  name: string;
-  createdAt?: string;
-  updatedAt?: string;
+  created_at: string;
 }
 
 export type AccountType = 'bank' | 'ewallet' | 'cash';
@@ -47,11 +45,8 @@ export interface Account {
   type: AccountType;
   created_at: string;
   createdAt: string; // for compatibility
-  user: {
-    id: string;
-    email: string;
-    created_at: string;
-  };
+  transactions: string[];
+  user: User;
 }
 
 export interface AccountsResponse {
@@ -62,10 +57,14 @@ export interface Category {
   id: string;
   name: string;
   type: 'income' | 'expense';
+  created_at: string;
+  user_id: string;
+  transactions: string[];
+  user: User;
   icon?: string;
   color?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string; // for compatibility
+  updatedAt?: string; // for compatibility
 }
 
 export interface RawEvent {
@@ -115,6 +114,7 @@ export interface TransactionCreatePayload {
   currency: string;
   description: string;
   occurred_at: string;
+  external_id?: string;
 }
 
 export interface TransactionUpdatePayload {
@@ -125,6 +125,80 @@ export interface TransactionUpdatePayload {
   currency?: string;
   description?: string;
   occurred_at?: string;
+  external_id?: string;
+}
+
+// Full transaction payload structure for API responses
+export interface TransactionFullPayload {
+  id: string;
+  user_id: string;
+  account_id: string;
+  category_id: string;
+  amount: number;
+  currency: string;
+  description: string;
+  external_id: string;
+  raw_event_id: string;
+  type: 'income' | 'expense';
+  occurred_at: string;
+  created_at: string;
+  updated_at: string;
+  account: {
+    id: string;
+    name: string;
+    type: string;
+    user_id: string;
+    created_at: string;
+    createdAt: string; // for compatibility
+    transactions: string[];
+    user: {
+      id: string;
+      email: string;
+      created_at: string;
+    };
+  };
+  category: {
+    id: string;
+    name: string;
+    type: string;
+    user_id: string;
+    created_at: string;
+    createdAt?: string; // for compatibility
+    updatedAt?: string; // for compatibility
+    transactions: string[];
+    user: {
+      id: string;
+      email: string;
+      created_at: string;
+    };
+  };
+  raw_event: {
+    id: string;
+    external_id: string;
+    source: string;
+    provider_hint: string;
+    mail_from: string;
+    mail_to: string;
+    subject: string;
+    message_id: string;
+    payload: string;
+    status: string;
+    error_message: string;
+    received_at: string;
+    created_at: string;
+    user_id: string;
+    transactions: string[];
+    user: {
+      id: string;
+      email: string;
+      created_at: string;
+    };
+  };
+  user: {
+    id: string;
+    email: string;
+    created_at: string;
+  };
 }
 
 export interface TransactionsPaginationResponse {
