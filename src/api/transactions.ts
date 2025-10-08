@@ -7,6 +7,7 @@ import {
   TransactionUpdatePayload, 
   TransactionListResponse,
   TransactionFullPayload,
+  TransactionFullCreatePayload,
   AccountType
 } from '../types/api';
 
@@ -92,7 +93,7 @@ export const transactionsApi = {
     }
   },
 
-  create: async (data: TransactionCreatePayload): Promise<Transaction> => {
+  create: async (data: TransactionCreatePayload | TransactionFullCreatePayload): Promise<Transaction> => {
     try {
       console.log('Creating transaction with payload:', data);
       const response = await axios.post<TransactionFullPayload>('/transactions', data);

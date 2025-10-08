@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Edit, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Transaction, TransactionFilters } from '@/types/api';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/store/authStore';
 
 const transactionSchema = z.object({
   account_id: z.string().min(1, 'Account is required'),
@@ -36,6 +37,9 @@ export default function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState<TransactionFilters>({ page: 1, limit: 10 });
   const queryClient = useQueryClient();
+  
+  // Get current user from auth store
+  const { user } = useAuthStore();
 
   const { data: transactionsData, isLoading, error } = useQuery({
     queryKey: ['transactions', filters],
@@ -64,7 +68,7 @@ export default function Transactions() {
     defaultValues: {
       account_id: '',
       category_id: '',
-      amount: 0,
+      amount: undefined,
       type: 'expense',
       description: '',
       occurred_at: format(new Date(), 'yyyy-MM-dd'),
@@ -112,15 +116,87 @@ export default function Transactions() {
     if (editingTransaction) {
       updateMutation.mutate({ id: editingTransaction.id, data });
     } else {
-      createMutation.mutate({
+      // Find the selected account and category to build full nested payload
+      const selectedAccount = accounts?.find(acc => acc.id === data.account_id);
+      const selectedCategory = categories?.find(cat => cat.id === data.category_id);
+      
+      if (!selectedAccount || !selectedCategory || !user) {
+        toast.error('Missing required data. Please refresh and try again.');
+        return;
+      }
+
+      // Build the full nested payload structure
+      const fullPayload = {
+        id: crypto.randomUUID(), // Generate temporary ID
+        user_id: user.id,
         account_id: data.account_id,
         category_id: data.category_id,
         amount: data.amount,
-        type: data.type,
-        description: data.description,
-        occurred_at: data.occurred_at,
         currency: data.currency,
-      });
+        description: data.description,
+        external_id: crypto.randomUUID(), // Generate external ID
+        raw_event_id: crypto.randomUUID(), // Generate raw event ID
+        type: data.type,
+        occurred_at: data.occurred_at,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        account: {
+          id: selectedAccount.id,
+          name: selectedAccount.name,
+          type: selectedAccount.type,
+          user_id: selectedAccount.user_id,
+          created_at: selectedAccount.created_at,
+          transactions: selectedAccount.transactions || [],
+          user: {
+            id: user.id,
+            email: user.email,
+            created_at: user.created_at,
+          },
+        },
+        category: {
+          id: selectedCategory.id,
+          name: selectedCategory.name,
+          type: selectedCategory.type,
+          user_id: user.id,
+          created_at: selectedCategory.createdAt || new Date().toISOString(),
+          transactions: [],
+          user: {
+            id: user.id,
+            email: user.email,
+            created_at: user.created_at,
+          },
+        },
+        raw_event: {
+          id: crypto.randomUUID(),
+          external_id: crypto.randomUUID(),
+          source: "manual",
+          provider_hint: "manual_entry",
+          mail_from: "",
+          mail_to: "",
+          subject: `Manual transaction: ${data.description}`,
+          message_id: "",
+          payload: JSON.stringify(data),
+          status: "processed",
+          error_message: "",
+          received_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          user_id: user.id,
+          transactions: [],
+          user: {
+            id: user.id,
+            email: user.email,
+            created_at: user.created_at,
+          },
+        },
+        user: {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+        },
+      };
+
+      console.log('Sending full payload:', fullPayload);
+      createMutation.mutate(fullPayload as any); // Type assertion for the full payload
     }
   };
 
@@ -246,6 +322,7 @@ export default function Transactions() {
                           <Input
                             type="number"
                             step="0.01"
+                            placeholder="1000.00"
                             {...field}
                             onChange={(e) => field.onChange(parseFloat(e.target.value))}
                           />

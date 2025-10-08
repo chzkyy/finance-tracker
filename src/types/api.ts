@@ -128,6 +128,76 @@ export interface TransactionUpdatePayload {
   external_id?: string;
 }
 
+// Full transaction create payload with all nested objects
+export interface TransactionFullCreatePayload {
+  id: string;
+  user_id: string;
+  account_id: string;
+  category_id: string;
+  amount: number;
+  currency: string;
+  description: string;
+  external_id: string;
+  raw_event_id: string;
+  type: 'income' | 'expense';
+  occurred_at: string;
+  created_at: string;
+  updated_at: string;
+  account: {
+    id: string;
+    name: string;
+    type: string;
+    user_id: string;
+    created_at: string;
+    transactions: string[];
+    user: {
+      id: string;
+      email: string;
+      created_at: string;
+    };
+  };
+  category: {
+    id: string;
+    name: string;
+    type: string;
+    user_id: string;
+    created_at: string;
+    transactions: string[];
+    user: {
+      id: string;
+      email: string;
+      created_at: string;
+    };
+  };
+  raw_event: {
+    id: string;
+    external_id: string;
+    source: string;
+    provider_hint: string;
+    mail_from: string;
+    mail_to: string;
+    subject: string;
+    message_id: string;
+    payload: string;
+    status: string;
+    error_message: string;
+    received_at: string;
+    created_at: string;
+    user_id: string;
+    transactions: string[];
+    user: {
+      id: string;
+      email: string;
+      created_at: string;
+    };
+  };
+  user: {
+    id: string;
+    email: string;
+    created_at: string;
+  };
+}
+
 // Full transaction payload structure for API responses
 export interface TransactionFullPayload {
   id: string;
