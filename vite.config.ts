@@ -15,4 +15,35 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Ensure consistent chunk names for better caching
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.names?.[0]?.split('.') || [];
+          const extType = info[info.length - 1];
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType || '')) {
+            return `assets/images/[name]-[hash][extname]`;
+          }
+          if (/css/i.test(extType || '')) {
+            return `assets/css/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        },
+      },
+    },
+    // Enable source maps for better debugging in production
+    sourcemap: mode !== 'production',
+    // Ensure manifest.json and service worker are copied to dist
+    assetsInlineLimit: 0,
+  },
+  // PWA specific configurations
+  publicDir: 'public',
+  base: '/',
+  // Ensure service worker and manifest are served correctly
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
+  },
 }));

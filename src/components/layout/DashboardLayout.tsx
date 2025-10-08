@@ -14,6 +14,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { PWAInstallButton } from '@/components/PWAInstallButton';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -141,7 +142,7 @@ export function DashboardLayout({ children }: Readonly<DashboardLayoutProps>) {
             <Menu className="h-6 w-6" />
           </Button>
           <h1 className="text-lg font-bold text-primary">FinanceTracker</h1>
-          <div /> {/* Spacer for centering */}
+          <PWAInstallButton />
         </div>
       </div>
 

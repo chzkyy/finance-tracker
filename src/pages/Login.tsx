@@ -18,9 +18,7 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const registerSchema = loginSchema.extend({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-});
+const registerSchema = loginSchema; // Same as login schema, no name field needed
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -39,7 +37,7 @@ export default function Login() {
 
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: '', email: '', password: '' },
+    defaultValues: { email: '', password: '' },
   });
 
   const onLogin = async (data: LoginFormData) => {
@@ -50,7 +48,18 @@ export default function Login() {
       toast.success('Login successful!');
       navigate('/');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      console.error('Login error:', error);
+      if (error.code === 'ECONNABORTED') {
+        toast.error('Connection timeout. Please check your internet connection and try again.');
+      } else if (error.response?.status === 401) {
+        toast.error('Invalid email or password.');
+      } else if (error.response?.status === 429) {
+        toast.error('Too many login attempts. Please try again later.');
+      } else if (!error.response) {
+        toast.error('Network error. Please check your internet connection.');
+      } else {
+        toast.error(error.response?.data?.message || 'Login failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -61,14 +70,26 @@ export default function Login() {
     try {
       const response = await authApi.register({ 
         email: data.email, 
-        password: data.password, 
-        name: data.name 
+        password: data.password
       });
       login(response.token, response.user);
-      toast.success('Registration successful!');
+      toast.success('Registration successful! Welcome to Finance Tracker!');
       navigate('/');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      console.error('Registration error:', error);
+      if (error.code === 'ECONNABORTED') {
+        toast.error('Connection timeout. Please check your internet connection and try again.');
+      } else if (error.response?.status === 409) {
+        toast.error('Email already exists. Please use a different email or try logging in.');
+      } else if (error.response?.status === 422) {
+        toast.error('Invalid data. Please check your email and password format.');
+      } else if (error.response?.status === 429) {
+        toast.error('Too many registration attempts. Please try again later.');
+      } else if (!error.response) {
+        toast.error('Network error. Please check your internet connection.');
+      } else {
+        toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -86,9 +107,19 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted p-1 rounded-lg">
+              <TabsTrigger 
+                value="login" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm font-medium transition-all duration-200"
+              >
+                Login
+              </TabsTrigger>
+              <TabsTrigger 
+                value="register"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm font-medium transition-all duration-200"
+              >
+                Register
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -101,7 +132,12 @@ export default function Login() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="your@email.com" {...field} />
+                          <Input 
+                            type="email" 
+                            placeholder="your@email.com" 
+                            {...field}
+                            autoComplete="email"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -120,6 +156,7 @@ export default function Login() {
                               placeholder="••••••" 
                               {...field} 
                               className="pr-10"
+                              autoComplete="current-password"
                             />
                             <button
                               type="button"
@@ -135,7 +172,7 @@ export default function Login() {
                     )}
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Loading...' : 'Login'}
+                    {isLoading ? 'Logging in...' : 'Login'}
                   </Button>
                 </form>
               </Form>
@@ -151,7 +188,12 @@ export default function Login() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="your@email.com" {...field} />
+                          <Input 
+                            type="email" 
+                            placeholder="your@email.com" 
+                            {...field}
+                            autoComplete="email"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -170,6 +212,7 @@ export default function Login() {
                               placeholder="••••••" 
                               {...field} 
                               className="pr-10"
+                              autoComplete="new-password"
                             />
                             <button
                               type="button"
@@ -185,7 +228,7 @@ export default function Login() {
                     )}
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Loading...' : 'Register'}
+                    {isLoading ? 'Creating account...' : 'Register'}
                   </Button>
                 </form>
               </Form>

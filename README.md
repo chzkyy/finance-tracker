@@ -1,5 +1,7 @@
 # FinanceTracker - Personal Finance Management Application
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/3dc99c32-31bd-4189-8b37-f235fe133242/deploy-status)](https://app.netlify.com/projects/financial-tracker-fe/deploys)
+
 A modern, full-featured financial tracker built with React 18, TypeScript, and Tailwind CSS. Track your income, expenses, accounts, and generate insightful reports.
 
 ## 🚀 Features

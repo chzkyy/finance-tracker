@@ -2,11 +2,11 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://finance-be.calestira.com',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://finance-be.calestira.com/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 30000, // Increased to 30 seconds timeout
 });
 
 // Request interceptor for adding auth token
@@ -16,6 +16,14 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Log request details for debugging
+    console.log('API Request:', {
+      url: `${config.baseURL}${config.url}`,
+      method: config.method,
+      timeout: config.timeout
+    });
+    
     return config;
   },
   (error) => {
