@@ -19,29 +19,20 @@ import { Plus, Trash2, Edit, Filter, ChevronLeft, ChevronRight } from 'lucide-re
 import { Transaction, TransactionFilters, TransactionCreatePayload, TransactionUpdatePayload } from '@/types/api';
 import { format } from 'date-fns';
 
-// Helper function to format date for datetime-local input (YYYY-MM-DDTHH:MM)
-const formatDateTimeLocal = (date: Date | string) => {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
 // Helper function to convert datetime-local format to ISO with +07:00 timezone
 const formatDateTimeWithTimezone = (dateTimeLocal: string) => {
-  // dateTimeLocal format: "2025-10-08T12:00"
-  // Convert to: "2025-10-08T12:00:00+07:00"
-  return `${dateTimeLocal}:00+07:00`;
+  // Extract just the date part from dateTimeLocal format
+  // dateTimeLocal could be "2025-10-08" or "2025-10-08T12:00"
+  const datePart = dateTimeLocal.split('T')[0];
+  // Always use 00:00:00 time
+  return `${datePart}T00:00:00+07:00`;
 };
 
-// Helper function to convert ISO datetime to datetime-local format for form display
+// Helper function to convert ISO datetime to date format for form display
 const parseISOToDateTimeLocal = (isoDateTime: string) => {
-  // Parse ISO datetime and convert to local datetime-local format
+  // Parse ISO datetime and convert to date format (yyyy-MM-dd)
   const date = new Date(isoDateTime);
-  return formatDateTimeLocal(date);
+  return format(date, 'yyyy-MM-dd');
 };
 
 const transactionSchema = z.object({
