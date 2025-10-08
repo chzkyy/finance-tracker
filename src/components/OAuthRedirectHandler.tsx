@@ -14,15 +14,8 @@ const OAuthRedirectHandler: React.FC<OAuthRedirectHandlerProps> = ({ children })
     const code = searchParams.get('code');
     const state = searchParams.get('state');
 
-    console.log('OAuthRedirectHandler checking parameters:', {
-      code: code ? `${code.substring(0, 20)}...` : null,
-      state: state ? `${state.substring(0, 50)}...` : null,
-      hasParameters: !!(code && state)
-    });
-
     // If we have code and state parameters, this is likely an OAuth callback
     if (code && state) {
-      console.log('OAuth callback detected, redirecting to callback handler');
       // Redirect to the OAuth callback handler with all parameters
       const callbackUrl = `/oauth/callback?${searchParams.toString()}`;
       navigate(callbackUrl, { replace: true });

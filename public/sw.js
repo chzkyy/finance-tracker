@@ -11,15 +11,12 @@ const urlsToCache = [
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching files');
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('Service Worker: Installed and caching complete');
         return self.skipWaiting();
       })
       .catch((error) => {
@@ -30,19 +27,16 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Deleting old cache', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('Service Worker: Activated');
       return self.clients.claim();
     })
   );
@@ -90,7 +84,6 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         // Return cached version if available
         if (response) {
-          console.log('Service Worker: Serving from cache', event.request.url);
           return response;
         }
 
@@ -116,8 +109,6 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch((error) => {
-            console.error('Service Worker: Fetch failed', error);
-
             // Try to return from cache if network fails
             return caches.match(event.request).then((cachedResponse) => {
               if (cachedResponse) {
@@ -141,9 +132,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Handle background sync
-self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Background sync', event.tag);
-  
+self.addEventListener('sync', (event) => {            
   if (event.tag === 'background-sync') {
     event.waitUntil(
       // Implement background sync logic here
@@ -155,8 +144,6 @@ self.addEventListener('sync', (event) => {
 
 // Handle push notifications
 self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push notification received', event);
-  
   const options = {
     body: event.data ? event.data.text() : 'New notification from Finance Tracker',
     icon: '/icons/icon-192x192.png',
@@ -187,8 +174,6 @@ self.addEventListener('push', (event) => {
 
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification click received');
-  
   event.notification.close();
 
   if (event.action === 'explore') {
@@ -203,7 +188,6 @@ async function syncPendingData() {
   try {
     // Implement your sync logic here
     // For example, sync pending transactions with the server
-    console.log('Service Worker: Syncing pending data...');
     
     // This would be your actual sync implementation
     // const pendingTransactions = await getPendingTransactions();
@@ -211,14 +195,12 @@ async function syncPendingData() {
     
     return Promise.resolve();
   } catch (error) {
-    console.error('Service Worker: Sync failed', error);
     return Promise.reject(error);
   }
 }
 
 // Handle messages from the main thread
 self.addEventListener('message', (event) => {
-  console.log('Service Worker: Message received', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();

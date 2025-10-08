@@ -105,7 +105,6 @@ export default function Categories() {
 
   // Ensure categories is always an array
   const categoriesArray = Array.isArray(categories) ? categories : [];
-  console.log('Categories data:', categories, 'Array:', categoriesArray);
   const incomeCategories = categoriesArray.filter((c) => c.type === 'income');
   const expenseCategories = categoriesArray.filter((c) => c.type === 'expense');
 

@@ -22,12 +22,6 @@ const OAuthCallback = () => {
         const code = searchParams.get('code');
         const state = searchParams.get('state');
 
-        console.log('OAuth callback processing:', {
-          code: code ? `${code.substring(0, 20)}...` : null,
-          state: state ? `${state.substring(0, 50)}...` : null,
-          allParams: Array.from(searchParams.entries())
-        });
-
         if (!code || !state) {
           throw new Error('Missing authorization code or state parameter');
         }

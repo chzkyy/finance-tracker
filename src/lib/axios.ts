@@ -17,13 +17,7 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Log request details for debugging
-    console.log('API Request:', {
-      url: `${config.baseURL}${config.url}`,
-      method: config.method,
-      timeout: config.timeout
-    });
-    
+    // Log request details for debugging    
     return config;
   },
   (error) => {
