@@ -17,7 +17,6 @@ import * as z from 'zod';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Transaction, TransactionFilters, TransactionCreatePayload, TransactionUpdatePayload } from '@/types/api';
-import { format } from 'date-fns';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 // Helper function to convert datetime-local format to ISO with +07:00 timezone
@@ -29,11 +28,20 @@ const formatDateTimeWithTimezone = (dateTimeLocal: string) => {
   return `${datePart}T00:00:00+07:00`;
 };
 
-// Helper function to convert ISO datetime to date format for form display
+// Helper function to convert ISO datetime to date format for form display (UTC+7)
 const parseISOToDateTimeLocal = (isoDateTime: string) => {
-  // Parse ISO datetime and convert to date format (yyyy-MM-dd)
   const date = new Date(isoDateTime);
-  return format(date, 'yyyy-MM-dd');
+  return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+};
+
+// Helper function to format a display date in UTC+7
+const formatReadableUTC7 = (input: string | Date) => {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+  }).format(new Date(input));
 };
 
 const transactionSchema = z.object({
@@ -43,7 +51,7 @@ const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
   description: z.string().min(1, 'Description is required'),
   occurred_at: z.string().min(1, 'Date is required'),
-  currency: z.string().default('IDR'),
+  currency: z.string().default('idr'),
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -86,7 +94,7 @@ export default function Transactions() {
       amount: undefined,
       type: undefined,
       description: '',
-      occurred_at: format(new Date(), 'yyyy-MM-dd'),
+      occurred_at: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }),
       currency: 'idr',
     },
   });
@@ -163,7 +171,7 @@ export default function Transactions() {
       amount: transaction.amount,
       type: transaction.type,
       description: transaction.description,
-      occurred_at: format(new Date(transaction.occurred_at || transaction.created_at), 'yyyy-MM-dd'),
+      occurred_at: new Date(transaction.occurred_at || transaction.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }),
       currency: transaction.currency,
     });
     setIsOpen(true);
@@ -203,7 +211,7 @@ export default function Transactions() {
                   account_id: '',
                   category_id: '',
                   amount: undefined,
-                  type: 'expense',
+                  type: undefined,
                   description: '',
                   occurred_at: '',
                   currency: '',
@@ -230,7 +238,7 @@ export default function Transactions() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -436,7 +444,7 @@ export default function Transactions() {
                 {!isLoading && !error && transactionsData && transactionsData.data && transactionsArray.length > 0 && 
                   transactionsArray.map((transaction) => (
                     <TableRow key={transaction.id}>
-                      <TableCell>{format(new Date(transaction.occurred_at || transaction.created_at), 'MMM dd, yyyy')}</TableCell>
+                      <TableCell>{formatReadableUTC7(transaction.occurred_at || transaction.created_at)}</TableCell>
                       <TableCell>{transaction.description}</TableCell>
                       <TableCell>{transaction.category?.name || 'from email'}</TableCell>
                       <TableCell>{transaction.account?.name || 'from email'}</TableCell>

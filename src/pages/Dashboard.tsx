@@ -161,12 +161,13 @@ export default function Dashboard() {
                             {transaction.type === 'income' ? '↑' : '↓'} {transaction.type}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {new Date(transaction.occurred_at).toLocaleDateString('id-ID', {
+                            {new Intl.DateTimeFormat('id-ID', {
+                              timeZone: 'Asia/Jakarta',
                               day: '2-digit',
                               month: 'short',
                               hour: '2-digit',
                               minute: '2-digit'
-                            })}
+                            }).format(new Date(transaction.occurred_at))}
                           </span>
                         </div>
                       </div>

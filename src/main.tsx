@@ -1,6 +1,31 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import * as Sentry from "@sentry/react";
+
+// Initialize Sentry for error monitoring and performance (conditionally enabled if DSN is provided)
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE || import.meta.env.VITE_SENTRY_ENVIRONMENT || 'production',
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    sendDefaultPii: true,
+    sendClientReports: true,
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    enableLogs: true,
+    attachStacktrace: true,
+    normalizeDepth: 10,
+    initialScope: {
+      tags: { app: 'finance-tracker' },
+    },
+
+  });
+}
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
@@ -53,4 +78,8 @@ window.addEventListener('appinstalled', (e) => {
   // You can track this event for analytics
 });
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <Sentry.ErrorBoundary fallback={<div>Something went wrong</div>}>
+    <App />
+  </Sentry.ErrorBoundary>
+);

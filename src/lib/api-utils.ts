@@ -26,7 +26,8 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
  * Formats date consistently
  */
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
     year: 'numeric',
     month: 'short',
     day: 'numeric',

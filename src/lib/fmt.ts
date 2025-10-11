@@ -2,6 +2,7 @@ export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   
   return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
