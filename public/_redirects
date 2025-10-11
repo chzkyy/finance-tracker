@@ -1,5 +1,5 @@
 # Sentry tunnel to avoid adblock "blocked:other" on envelope requests
-POST /monitoring https://o4510171038941184.ingest.de.sentry.io/api/4510171169357904/envelope 200!
+POST /monitoring https://a561817193c525ad4976ba6f014a38a1@o4510171038941184.ingest.de.sentry.io/4510171169357904 200!
 
 # Proxy semua request API ke backend Heroku
 /api/*   https://finance-be.calestira.com/api/:splat   200

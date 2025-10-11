@@ -5,7 +5,7 @@
 # Sentry tunnel: forward same-origin POST to Sentry envelope endpoint
 [[redirects]]
   from = "/monitoring"
-  to = "https://o4510171038941184.ingest.de.sentry.io/api/4510171169357904/envelope"
+  to = "https://a561817193c525ad4976ba6f014a38a1@o4510171038941184.ingest.de.sentry.io/4510171169357904"
   status = 200
   force = true
   methods = ["POST","OPTIONS"]
