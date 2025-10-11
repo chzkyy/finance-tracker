@@ -84,10 +84,10 @@ export default function Transactions() {
       account_id: '',
       category_id: '',
       amount: undefined,
-      type: 'expense',
+      type: undefined,
       description: '',
       occurred_at: format(new Date(), 'yyyy-MM-dd'),
-      currency: 'IDR',
+      currency: 'idr',
     },
   });
 
@@ -103,7 +103,7 @@ export default function Transactions() {
         account_id: '',
         category_id: '',
         amount: undefined,
-        type: 'expense', // Keep default type to avoid validation errors
+        type: undefined, // Keep default type to avoid validation errors
         description: '',
         occurred_at: '',
         currency: '',
@@ -145,7 +145,7 @@ export default function Transactions() {
       type: data.type,
       description: data.description,
       occurred_at: formatDateTimeWithTimezone(data.occurred_at),
-      currency: data.currency,
+      currency: "IDR",
     };
 
     if (editingTransaction) {
