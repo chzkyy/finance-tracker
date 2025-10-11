@@ -1,0 +1,23 @@
+# Netlify configuration for Finance Tracker
+[build]
+  publish = "dist"
+
+# Sentry tunnel: forward same-origin POST to Sentry envelope endpoint
+[[redirects]]
+  from = "/monitoring"
+  to = "https://o4510171038941184.ingest.de.sentry.io/api/4510171169357904/envelope"
+  status = 200
+  force = true
+  methods = ["POST","OPTIONS"]
+
+# Optional: API proxy (mirror of rules in _redirects)
+[[redirects]]
+  from = "/api/*"
+  to = "https://finance-be.calestira.com/api/:splat"
+  status = 200
+
+# SPA fallback must be last
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

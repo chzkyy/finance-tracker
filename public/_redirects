@@ -1,5 +1,5 @@
-# Redirect semua route frontend ke index.html
-/*     /index.html   200
+# Sentry tunnel to avoid adblock "blocked:other" on envelope requests
+POST /monitoring https://o4510171038941184.ingest.de.sentry.io/api/4510171169357904/envelope 200!
 
 # Proxy semua request API ke backend Heroku
 /api/*   https://finance-be.calestira.com/api/:splat   200
@@ -8,5 +8,5 @@
 /assets/*   /assets/:splat   200
 /favicon.ico  /favicon.ico   200
 
-# Sentry tunnel to avoid adblock "blocked:other" on envelope requests
-/monitoring  https://o4510171038941134.ingest.de.sentry.io/api/4510171169357904/envelope  200
+# Redirect semua route frontend ke index.html (SPA fallback harus paling bawah agar tidak menimpa rule lain)
+/*     /index.html   200
