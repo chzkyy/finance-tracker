@@ -2,12 +2,26 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { env } from "process";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Dev proxy for Sentry tunnel so requests to /monitoring succeed locally
+    proxy: {
+      "/monitoring": {
+        target: env.VITE_SENTRY_DSN,
+        changeOrigin: true,
+        secure: true,
+        headers: {
+          "Content-Type": "application/x-sentry-envelope",
+        },
+        // Map the local /monitoring path to the Sentry envelope endpoint for the project
+        rewrite: (path) => "/api/4510171169357904/envelope",
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

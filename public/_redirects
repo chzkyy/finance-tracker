@@ -7,3 +7,6 @@
 # (opsional) kalau kamu punya file statis lain
 /assets/*   /assets/:splat   200
 /favicon.ico  /favicon.ico   200
+
+# Sentry tunnel to avoid adblock "blocked:other" on envelope requests
+/monitoring  https://o4510171038941134.ingest.de.sentry.io/api/4510171169357904/envelope  200

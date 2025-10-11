@@ -49,6 +49,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Do not intercept Sentry tunnel requests to avoid caching or altering envelopes
+  try {
+    const url = new URL(event.request.url);
+    if (url.pathname === '/monitoring') {
+      return;
+    }
+  } catch (_) {
+    // ignore URL parse errors
+    
+  }
+
   // Handle navigation requests
   if (event.request.mode === 'navigate') {
     event.respondWith(

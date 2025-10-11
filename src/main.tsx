@@ -8,6 +8,8 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     environment: import.meta.env.MODE || import.meta.env.VITE_SENTRY_ENVIRONMENT || 'production',
+    // Route Sentry envelopes through first-party domain to avoid tracking blockers (fixes "blocked:other")
+    tunnel: '/monitoring',
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(),
